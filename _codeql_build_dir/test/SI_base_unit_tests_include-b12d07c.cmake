@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/SI/SI/_codeql_build_dir/test/SI_base_unit_tests_tests-b12d07c.cmake")
-  include("/home/runner/work/SI/SI/_codeql_build_dir/test/SI_base_unit_tests_tests-b12d07c.cmake")
-else()
-  add_test(SI_base_unit_tests_NOT_BUILT-b12d07c SI_base_unit_tests_NOT_BUILT-b12d07c)
-endif()
