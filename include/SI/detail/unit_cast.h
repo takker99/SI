@@ -11,7 +11,9 @@
  **/
 #pragma once
 
+#include "concepts.h"
 #include "detail.h"
+#include <concepts>
 #include <ratio>
 #include <type_traits>
 
@@ -19,6 +21,12 @@ namespace SI::detail {
 
 /// function to cast between two units of the same type
 template <typename _target_type, typename _rhs_T>
+  requires requires {
+    typename _target_type::internal_type;
+    typename _target_type::ratio;
+    typename _rhs_T::internal_type;
+    typename _rhs_T::ratio;
+  } && RatioLike<typename _target_type::ratio> && RatioLike<typename _rhs_T::ratio>
 constexpr auto unit_cast(const _rhs_T &rhs) {
   // using static assert instead of std::enable if in order to be able to
   // forward declare this function easier

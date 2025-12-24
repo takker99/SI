@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.23...3.27)
 
+# Allow overriding C++ standard via option, default to C++20
+if(NOT DEFINED SI_CXX_STANDARD)
+  set(SI_CXX_STANDARD 20)
+endif()
+
 if(NOT DEFINED CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD ${SI_CXX_STANDARD})
   set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 endif()
 
@@ -41,7 +46,7 @@ target_include_directories(
   SI INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_compile_features(SI INTERFACE cxx_std_17)
+target_compile_features(SI INTERFACE cxx_std_20)
 
 if(SI_BUILD_TESTING)
   enable_testing()

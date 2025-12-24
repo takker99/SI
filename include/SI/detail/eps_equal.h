@@ -11,14 +11,14 @@
  **/
 #pragma once
 
+#include <concepts>
 #include <limits>
 #include <numeric>
-#include <type_traits>
 
 namespace SI::detail {
 
 /// @todo make eps_equal take different types with similar properties
-template <typename T, std::enable_if_t<std::is_floating_point_v<T>> * = nullptr>
+template <std::floating_point T>
 constexpr bool eps_equals(const T &lhs, const T &rhs) {
 
   return (lhs - rhs) < std::numeric_limits<T>::epsilon() &&

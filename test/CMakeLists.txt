@@ -16,13 +16,13 @@ target_include_directories(
   SI_detail_tests PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
                           $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
 
-target_compile_features(SI_detail_tests PRIVATE cxx_std_17)
+target_compile_features(SI_detail_tests PRIVATE cxx_std_20)
 target_link_libraries(SI_detail_tests Catch2::Catch2WithMain)
 
 target_compile_options(
   SI_detail_tests
   PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/std:c++17>
+    $<$<CXX_COMPILER_ID:MSVC>:/std:c++20>
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<CXX_COMPILER_ID:MSVC>:/WX>
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall>
@@ -47,13 +47,13 @@ target_include_directories(
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
           $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
 
-target_compile_features(SI_base_unit_tests PRIVATE cxx_std_17)
+target_compile_features(SI_base_unit_tests PRIVATE cxx_std_20)
 target_link_libraries(SI_base_unit_tests Catch2::Catch2WithMain)
 
 target_compile_options(
   SI_base_unit_tests
   PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/std:c++17>
+    $<$<CXX_COMPILER_ID:MSVC>:/std:c++20>
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<CXX_COMPILER_ID:MSVC>:/WX>
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall>
@@ -104,13 +104,13 @@ target_include_directories(
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
           $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
 
-target_compile_features(SI_derived_unit_tests PRIVATE cxx_std_17)
+target_compile_features(SI_derived_unit_tests PRIVATE cxx_std_20)
 target_link_libraries(SI_derived_unit_tests Catch2::Catch2WithMain)
 
 target_compile_options(
   SI_derived_unit_tests
   PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/std:c++17>
+    $<$<CXX_COMPILER_ID:MSVC>:/std:c++20>
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<CXX_COMPILER_ID:MSVC>:/WX>
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall>
@@ -131,13 +131,13 @@ target_include_directories(
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
           $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
 
-target_compile_features(SI_unit_benchmarks PRIVATE cxx_std_17)
+target_compile_features(SI_unit_benchmarks PRIVATE cxx_std_20)
 target_link_libraries(SI_unit_benchmarks Catch2::Catch2WithMain)
 
 target_compile_options(
   SI_unit_benchmarks
   PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/std:c++17>
+    $<$<CXX_COMPILER_ID:MSVC>:/std:c++20>
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<CXX_COMPILER_ID:MSVC>:/WX>
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall>
