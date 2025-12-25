@@ -11,6 +11,7 @@
  **/
 #pragma once
 
+#include "concepts.h"
 #include "number_parser.h"
 #include <cstdint>
 #include <numeric>
@@ -46,6 +47,7 @@ public:
 
 // forward declaration
 template <char _symbol, typename _exponent, typename _type, typename _ratio>
+  requires std::is_arithmetic_v<_type> && RatioLike<_exponent> && RatioLike<_ratio>
 struct unit_t;
 
 /// helper template to check if a type is a unit_t (false for all other
