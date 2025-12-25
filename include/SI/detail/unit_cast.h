@@ -11,7 +11,9 @@
  **/
 #pragma once
 
+#include "concepts.h"
 #include "detail.h"
+#include <concepts>
 #include <ratio>
 #include <type_traits>
 
@@ -19,6 +21,12 @@ namespace SI::detail {
 
 /// function to cast between two units of the same type
 template <typename _target_type, typename _rhs_T>
+  requires requires {
+    typename _target_type::internal_type;
+    typename _target_type::ratio;
+    typename _rhs_T::internal_type;
+    typename _rhs_T::ratio;
+  } && RatioLike<typename _target_type::ratio> && RatioLike<typename _rhs_T::ratio>
 constexpr auto unit_cast(const _rhs_T &rhs) {
   // using static assert instead of std::enable if in order to be able to
   // forward declare this function easier
@@ -45,13 +53,10 @@ constexpr auto unit_cast(const _rhs_T &rhs) {
            conversion_ratio::den)));
 }
 
-template <typename _unit_lhs, typename _unit_rhs>
+template <UnitLike _unit_lhs, UnitLike _unit_rhs>
+  requires std::convertible_to<typename _unit_lhs::internal_type, typename _unit_rhs::internal_type> &&
+           (_unit_lhs::symbol::value == _unit_rhs::symbol::value)
 struct unit_with_common_ratio {
-  static_assert(is_unit_t_v<_unit_lhs>, "only supported for SI::unit_t");
-  static_assert(is_unit_t_v<_unit_rhs>, "only supported for SI::unit_t");
-  static_assert(std::is_convertible<typename _unit_lhs::internal_type,
-                                    typename _unit_rhs::internal_type>::value);
-  static_assert(_unit_lhs::symbol::value == _unit_rhs::symbol::value);
   using type =
       unit_t<_unit_lhs::symbol::value, typename _unit_lhs::exponent,
              typename _unit_lhs::internal_type,

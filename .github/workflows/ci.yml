@@ -31,7 +31,7 @@ jobs:
 
           - name: macos-apple-clang
             os: macos-14
-            compiler-cppstd: "gnu17"
+            compiler-cppstd: "gnu20"
 
           - name: windows-msvc-19
             os: windows-2019

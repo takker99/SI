@@ -17,17 +17,22 @@
 #define SI_ENABLE_IMPLICIT_RATIO_CONVERSION true
 #endif
 
+#include "concepts.h"
 #include "detail.h"
 #include "eps_equal.h"
 #include "unit_cast.h"
 
+#include <concepts>
 #include <ratio>
 #include <type_traits>
 
 /// Namespace containing all SI units
 namespace SI::detail {
 
-template <typename _unit_lhs, typename _unit_rhs> struct unit_with_common_ratio;
+template <UnitLike _unit_lhs, UnitLike _unit_rhs>
+  requires std::convertible_to<typename _unit_lhs::internal_type, typename _unit_rhs::internal_type> &&
+           (_unit_lhs::symbol::value == _unit_rhs::symbol::value)
+struct unit_with_common_ratio;
 
 /// @todo add in-place unit_cast for move operators
 /// @todo add logarithmic units (decibel)
@@ -48,10 +53,8 @@ template <typename _unit_lhs, typename _unit_rhs> struct unit_with_common_ratio;
  **/
 template <char _symbol, typename _exponent, typename _type,
           typename _ratio = std::ratio<1>>
+  requires std::is_arithmetic_v<_type> && RatioLike<_exponent> && RatioLike<_ratio>
 struct unit_t {
-  static_assert(std::is_arithmetic_v<_type>, "Type is an arithmetic value");
-  static_assert(detail::is_ratio_v<_exponent>, "_exponent is a ratio type");
-  static_assert(detail::is_ratio_v<_ratio>, "_ratio is a std::ratio");
   using ratio = _ratio;
   using internal_type = _type;
   using exponent = _exponent;
@@ -65,19 +68,18 @@ struct unit_t {
 
   /// construct from other unit with implicitly convertible type
   template <typename _type_rhs>
+    requires std::convertible_to<_type_rhs, _type>
   constexpr unit_t(const unit_t<_symbol, _exponent, _type_rhs, _ratio> &rhs)
       : value_(rhs.value()) {
-    static_assert(std::is_convertible<_type_rhs, _type>::value,
-                  "Internal representation is convertible");
   }
 
   ~unit_t() = default;
 
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr unit_t(const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs)
       : value_{
             unit_cast<unit_t<_symbol, _exponent, _type, _ratio>>(rhs).value()} {
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -85,11 +87,11 @@ struct unit_t {
   }
 
   template <typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr unit_t(unit_t<_symbol, _exponent, _type, _rhs_ratio> &&rhs)
       : value_{
             std::move(unit_cast<unit_t<_symbol, _exponent, _type, _ratio>>(rhs)
                           .value())} {
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -101,28 +103,20 @@ struct unit_t {
 
   /// returns a new instance of the unit with a differend value and explicit
   /// specified underlying type
-  template <typename _unit_rhs> constexpr _unit_rhs as() const {
-    static_assert(is_unit_t_v<_unit_rhs>, "only supported for SI::unit_t");
-    static_assert(std::ratio_equal_v<typename _unit_rhs::exponent, _exponent>,
-                  "Exponents must match");
-    static_assert(_unit_rhs::symbol::value == _symbol,
-                  "target unit must be of the same type must match");
-
+  template <UnitLike _unit_rhs> 
+    requires (std::ratio_equal_v<typename _unit_rhs::exponent, _exponent> &&
+              _unit_rhs::symbol::value == _symbol)
+  constexpr _unit_rhs as() const {
     return unit_cast<_unit_rhs>(*this);
   }
 
   /// returns a new instance of the unit with a differend value with the same
   /// underlying type
   template <template <typename _type_rhs> typename _unit_rhs>
+    requires UnitLike<_unit_rhs<_type>> &&
+             (std::ratio_equal_v<typename _unit_rhs<_type>::exponent, _exponent> &&
+              _unit_rhs<_type>::symbol::value == _symbol)
   constexpr _unit_rhs<_type> as() const {
-    static_assert(is_unit_t_v<_unit_rhs<_type>>,
-                  "only supported for SI::unit_t");
-    static_assert(
-        std::ratio_equal_v<typename _unit_rhs<_type>::exponent, _exponent>,
-        "Exponents must match");
-    static_assert(_unit_rhs<_type>::symbol::value == _symbol,
-                  "target unit must be of the same type must match");
-
     return unit_cast<_unit_rhs<_type>>(*this);
   }
 
@@ -136,13 +130,11 @@ struct unit_t {
   constexpr unit_t &operator=(unit_t &&rhs) = default;
 
   /// Assignment of same unit but different ratio
-  template <
-      typename _rhs_ratio,
-      std::enable_if_t<!std::ratio_equal_v<_rhs_ratio, _ratio>> * = nullptr>
+  template <typename _rhs_ratio>
+    requires (!std::ratio_equal_v<_rhs_ratio, _ratio> && RatioLike<_rhs_ratio>)
   constexpr unit_t &
   operator=(const unit_t<_symbol, _exponent, _type, _rhs_ratio> &rhs) {
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -153,13 +145,11 @@ struct unit_t {
   }
 
   /// Move assignment of same unit but different ratio
-  template <
-      typename _rhs_ratio,
-      std::enable_if_t<!std::ratio_equal_v<_rhs_ratio, _ratio>> * = nullptr>
+  template <typename _rhs_ratio>
+    requires (!std::ratio_equal_v<_rhs_ratio, _ratio> && RatioLike<_rhs_ratio>)
   constexpr unit_t &
   operator=(unit_t<_symbol, _exponent, _type, _rhs_ratio> &&rhs) {
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -173,6 +163,7 @@ struct unit_t {
   /// Comparison operator takes considers different ratios, i.e. 1000
   /// micro == 1 milli
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio> && (std::is_integral_v<_type> || std::is_floating_point_v<_type>)
   constexpr bool operator==(
       const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) const {
 
@@ -181,9 +172,6 @@ struct unit_t {
             std::ratio_equal_v<ratio, _rhs_ratio>,
         "Implicit ratio conversion disabled, convert before comparing");
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
-    static_assert(std::is_integral_v<_type> || std::is_floating_point_v<_type>,
-                  "Is integral or floating point");
     using gcd_unit = typename unit_with_common_ratio<
         typename std::remove_reference<decltype(rhs)>::type,
         typename std::remove_reference<decltype(*this)>::type>::type;
@@ -200,16 +188,16 @@ struct unit_t {
 
   /// compares two values, considers different ratios.
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr bool operator!=(
       const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) const {
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     return !(*this == rhs);
   }
 
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr bool operator<(
       const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) const {
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -229,9 +217,9 @@ struct unit_t {
   }
 
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr bool operator>(
       const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) const {
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -256,11 +244,10 @@ struct unit_t {
 
   /// multiply with an unit of the same ratio
   template <typename _rhs_exponent, typename _rhs_type>
+    requires RatioLike<_rhs_exponent>
   constexpr auto operator*(
       const unit_t<_symbol, _rhs_exponent, _rhs_type, _ratio> &rhs) const {
 
-    static_assert(detail::is_ratio_v<_rhs_exponent>,
-                  "rhs exponent is a ratio type");
     return unit_t<_symbol, std::ratio_add<_rhs_exponent, _exponent>, _type,
                   std::ratio_multiply<ratio, _ratio>>{value() * rhs.value()};
   }
@@ -270,11 +257,9 @@ struct unit_t {
   /// the exponents this and rhs are added, the resulting ratio the ratio
   /// multiplied.
   template <typename _rhs_exponent, typename _rhs_ratio, typename _rhs_type>
+    requires RatioLike<_rhs_exponent> && RatioLike<_rhs_ratio>
   constexpr auto operator*(
       const unit_t<_symbol, _rhs_exponent, _rhs_type, _rhs_ratio> &rhs) const {
-    static_assert(detail::is_ratio_v<_rhs_exponent>,
-                  "rhs exponent is a ratio type");
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
 
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
@@ -296,13 +281,10 @@ struct unit_t {
 
   /// divide with same unit with same ratio but not the same exponent
   /// @returns unit with exponents subtracted from each others
-  template <typename _rhs_exponent, typename _rhs_type,
-            std::enable_if_t<std::ratio_not_equal_v<_rhs_exponent, _exponent>>
-                * = nullptr>
+  template <typename _rhs_exponent, typename _rhs_type>
+    requires (std::ratio_not_equal_v<_rhs_exponent, _exponent> && RatioLike<_rhs_exponent>)
   constexpr auto operator/(
       const unit_t<_symbol, _rhs_exponent, _rhs_type, _ratio> &rhs) const {
-    static_assert(detail::is_ratio_v<_rhs_exponent>,
-                  "rhs exponent is a ratio type");
     using rhs_t = typename std::remove_reference<decltype(rhs)>::type;
 
     return unit_t<_symbol,
@@ -314,14 +296,10 @@ struct unit_t {
   /// divide with a same unit but different ratios
   /// the ratio of the result is the gcd of the two ratios and the exponents are
   /// subtracted
-  template <typename _rhs_exponent, typename _rhs_type, typename _rhs_ratio,
-            std::enable_if_t<std::ratio_not_equal_v<_rhs_exponent, _exponent>>
-                * = nullptr>
+  template <typename _rhs_exponent, typename _rhs_type, typename _rhs_ratio>
+    requires (std::ratio_not_equal_v<_rhs_exponent, _exponent> && RatioLike<_rhs_exponent> && RatioLike<_rhs_ratio>)
   constexpr auto operator/(
       const unit_t<_symbol, _rhs_exponent, _rhs_type, _rhs_ratio> &rhs) const {
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
-    static_assert(detail::is_ratio_v<_rhs_exponent>,
-                  "rhs exponent is a ratio type");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -340,20 +318,14 @@ struct unit_t {
 
   /// if the same units of the same exponent but different ratio are divided
   /// then the result is a scalar
-  template <
-      typename _rhs_exponent, typename _rhs_type, typename _rhs_ratio,
-      std::enable_if_t<std::ratio_equal_v<_rhs_exponent, exponent>> * = nullptr>
+  template <typename _rhs_exponent, typename _rhs_type, typename _rhs_ratio>
+    requires (std::ratio_equal_v<_rhs_exponent, exponent> && RatioLike<_rhs_exponent> && RatioLike<_rhs_ratio>)
   constexpr _type operator/(
       const unit_t<_symbol, _rhs_exponent, _rhs_type, _rhs_ratio> &rhs) const {
     static_assert(SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
                       std::ratio_equal_v<_rhs_ratio, _ratio>,
                   "Implicit ratio conversion disabled, convert to same ratio "
                   "before dividing");
-
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
-
-    static_assert(detail::is_ratio_v<_rhs_exponent>,
-                  "rhs exponent is a ratio type");
 
     using gcd_unit = typename unit_with_common_ratio<
         typename std::remove_reference<decltype(*this)>::type,
@@ -370,10 +342,10 @@ struct unit_t {
 
   /// adds two values, returning type is type of lhs
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr unit_t operator+(
       const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) const {
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -391,13 +363,11 @@ struct unit_t {
   }
 
   /// add value of the same type but possibly different ratio
-  template <
-      typename _rhs_type, typename _rhs_ratio,
-      std::enable_if_t<!std::ratio_equal_v<_rhs_ratio, _ratio>> * = nullptr>
+  template <typename _rhs_type, typename _rhs_ratio>
+    requires (!std::ratio_equal_v<_rhs_ratio, _ratio> && RatioLike<_rhs_ratio>)
   constexpr unit_t &
   operator+=(const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) {
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -410,10 +380,10 @@ struct unit_t {
 
   /// subtracts two values, returning type is type of lhs
   template <typename _rhs_type, typename _rhs_ratio>
+    requires RatioLike<_rhs_ratio>
   constexpr unit_t operator-(
       const unit_t<_symbol, _exponent, _rhs_type, _rhs_ratio> &rhs) const {
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -431,12 +401,11 @@ struct unit_t {
   }
 
   /// subtract value of the same type but possibly different ratio
-  template <typename _rhs_type, typename _rhs_ratio,
-            std::enable_if<!std::ratio_equal_v<_rhs_ratio, _ratio>> * = nullptr>
+  template <typename _rhs_type, typename _rhs_ratio>
+    requires (!std::ratio_equal_v<_rhs_ratio, _ratio> && RatioLike<_rhs_ratio>)
   constexpr unit_t &
   operator-=(const unit_t<_symbol, _exponent, _type, _rhs_ratio> &rhs) {
 
-    static_assert(detail::is_ratio_v<_rhs_ratio>, "_rhs_ratio is a std::ratio");
     static_assert(
         SI_ENABLE_IMPLICIT_RATIO_CONVERSION ||
             std::ratio_equal_v<ratio, _rhs_ratio>,
@@ -484,9 +453,9 @@ private:
 /// operator to divide scalar type by unit encapsulating the same type
 /// template specialization handling integer types
 /// @results unit with negative exponent
-template <typename _type, char _symbol, typename _exponent, typename _rhs_type,
-          typename _ratio,
-          std::enable_if_t<std::is_integral_v<_type>> * = nullptr>
+template <std::integral _type, char _symbol, typename _exponent, typename _rhs_type,
+          typename _ratio>
+  requires RatioLike<_exponent> && RatioLike<_ratio>
 constexpr auto
 operator/(const _type &lhs,
           const unit_t<_symbol, _exponent, _rhs_type, _ratio> &rhs) {
@@ -494,7 +463,6 @@ operator/(const _type &lhs,
                     std::ratio_equal<std::ratio<1>, _ratio>::value,
                 "Implicit ratio conversion disabled, convert to ratio<1> "
                 "before dividing");
-  static_assert(detail::is_ratio_v<_exponent>, "Exponent is a ratio type");
   return unit_t<_symbol, std::ratio_multiply<std::ratio<-1>, _exponent>, _type,
                 _ratio>{lhs / rhs.value()};
 }
@@ -503,9 +471,9 @@ operator/(const _type &lhs,
 /// template specialization for floating point types, to avoid possible loss
 /// of precision when adjusting for ratio
 /// @results unit with negative exponent
-template <typename _type, char _symbol, typename _exponent, typename _rhs_type,
-          typename _ratio,
-          std::enable_if_t<std::is_floating_point_v<_type>> * = nullptr>
+template <std::floating_point _type, char _symbol, typename _exponent, typename _rhs_type,
+          typename _ratio>
+  requires RatioLike<_exponent> && RatioLike<_ratio>
 constexpr auto
 operator/(const _type &lhs,
           const unit_t<_symbol, _exponent, _rhs_type, _ratio> &rhs) {
@@ -513,7 +481,6 @@ operator/(const _type &lhs,
                     std::ratio_equal_v<_ratio, std::ratio<1>>,
                 "Implicit ratio conversion disabled, convert to ratio<1> "
                 "before dividing");
-  static_assert(detail::is_ratio_v<_exponent>, "Exponent is a ratio type");
   return unit_t<_symbol, std::ratio_multiply<std::ratio<-1>, _exponent>, _type,
                 _ratio>{lhs / rhs.value()};
 }

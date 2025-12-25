@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Breaking Changes
+
+* **Minimum C++ standard updated to C++20** - The library now requires C++20 for concepts support
+* Replaced all SFINAE (std::enable_if) with C++20 concepts for cleaner, more maintainable code
+* Added `SI::detail::RatioLike` concept for ratio validation
+* Updated CMake to default to C++20 (configurable via `SI_CXX_STANDARD` option)
+
+### Features
+
+* Template constraints now use modern C++20 concepts (`std::floating_point`, `std::integral`) instead of SFINAE
+* Improved compile-time error messages through concept constraints
+* Added `include/SI/detail/concepts.h` with `RatioLike` concept
+
+### Compatibility Notes
+
+* Compilers must support C++20 concepts (GCC 11+, Clang 13+, MSVC 19.20+, AppleClang 14.0+)
+* Users can override the C++ standard by setting `SI_CXX_STANDARD` CMake option if needed
+
 ## 2.5.4
 
 * Introduced CMake Workflow Presets
